@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import queryString from 'query-string'
 import io from 'socket.io-client'
 
+import * as styles from './styles'
+
 import Dictaphone from '../Dictophone'
 
 const Chat = ({ location, history }) => {
@@ -9,6 +11,7 @@ const Chat = ({ location, history }) => {
 
     const [messages, setMessages] = useState([])
     const [newMessage, setNewMessage] = useState('')
+    const [isDictaphoneDisabled, setDictaphoneDisableting] = useState(false)
 
     const [subtitlesForShowing, setSubtitlesForShowing] = useState(null)
     
@@ -25,9 +28,17 @@ const Chat = ({ location, history }) => {
             setMessages(oldMessages => [...oldMessages, message])
         })
 
+
+        socket.current.on('someone_starts_speak', () => {
+            setDictaphoneDisableting(true)
+        })
+
+        socket.current.on('someone_ends_speak', () => {
+            setDictaphoneDisableting(false)
+        })
+
         socket.current.on('subtitles', subtitles => {
-            // console.log('subtitles', subtitles)
-           
+            console.log('subtitles', subtitles.name)
             setSubtitlesForShowing(subtitles)
      
         })
@@ -63,6 +74,7 @@ const Chat = ({ location, history }) => {
             }}> Выйти </button>
         </div>
         <div>
+            Написать сообщение:
             <input {...{
                 value: newMessage,
                 onChange: (e) => {
@@ -76,8 +88,8 @@ const Chat = ({ location, history }) => {
                 }
             }}/>
         </div>
-        <div>
-            { <>
+        <div style={styles.subtitles_block}>
+            Субтитры от других пользователей: { <>
                 <div>
                 {subtitlesForShowing && ( <>
                         <span> { `${subtitlesForShowing.name}: ` } </span>
@@ -87,8 +99,14 @@ const Chat = ({ location, history }) => {
                 </div>
             </> }
         </div>
-        <Dictaphone {...{ sendSubtitles, socket }} />
+        <Dictaphone {...{
+            sendSubtitles,
+            isDictaphoneDisabled,
+            setDictaphoneDisableting,
+            socket,
+        }} />
         <div>
+            <div>Сообщения:</div>
             {
                 messages.map(({user, text}) => (
                     <div

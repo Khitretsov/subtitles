@@ -35,7 +35,6 @@ io.on('connection', socket => {
         const user = manageUsers.addUser(socket.id, name, room)
 
         if (user.error) return callback({ error: user.error })
-        console.log('ko-ko-ko', user)
         
         socket.join(room)
         socket.to(room).emit('message', {user: 'system', text: `Пользователь ${name} присоединился`})
@@ -56,10 +55,24 @@ io.on('connection', socket => {
         
         socket.to(user.room).emit('subtitles', {subtitles: data, name: user.name})
     })
+
+    socket.on('i_start_speak', () => {
+        const user = manageUsers.getUser(socket.id)
+        if (!user) return callback({ error: 'user is not autorized'})
+        
+        socket.to(user.room).emit('someone_starts_speak')
+    })
+
+    socket.on('i_end_speak', () => {
+        const user = manageUsers.getUser(socket.id)
+        if (!user) return callback({ error: 'user is not autorized'})
+        
+        socket.to(user.room).emit('someone_ends_speak')
+    })
     
     socket.on('disconnect', () => {
         const user = manageUsers.removeUser(socket.id)
-        // console.log('ko-ko-ko', user    )
+        
         if(user) {
             console.log(user.name, user.room)
             io.to(user.room).emit('message', {user: 'system', text: `Пользователь ${user.name} покинул беседу`})

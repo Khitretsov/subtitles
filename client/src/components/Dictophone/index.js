@@ -3,7 +3,12 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 
 import * as styles from './styles'
 
-const Dictaphone = ({ sendSubtitles, socket }) => {
+const Dictaphone = ({
+    sendSubtitles,
+    isDictaphoneDisabled,
+    setDictaphoneDisableting,
+    socket,
+}) => {
 
     const [saveText, setSaveText] = useState([])
 
@@ -15,8 +20,6 @@ const Dictaphone = ({ sendSubtitles, socket }) => {
         listening,
     } = useSpeechRecognition()
 
-    // } = useSpeechRecognition({ commands })
-
     useEffect(
         () => {
             console.log('finalTranscript', interimTranscript)
@@ -25,6 +28,9 @@ const Dictaphone = ({ sendSubtitles, socket }) => {
                 sendSubtitles(finalTranscript, true)
                 setSaveText([...saveText, finalTranscript])
                 resetTranscript()
+            }
+            return () => {
+                SpeechRecognition.stopListening()
             }
         },
         [ finalTranscript ]
@@ -45,13 +51,13 @@ const Dictaphone = ({ sendSubtitles, socket }) => {
     }
 
     const listenContinuously = () => {
+        socket.current.emit('i_start_speak')
         SpeechRecognition.startListening({
             continuous: true,
             language: 'ru',
         });
     };
 
-    // const [message, setMessage] = useState('');
 
     return (
         <div style={styles.dictophone}>
@@ -69,20 +75,25 @@ const Dictaphone = ({ sendSubtitles, socket }) => {
 
                     <button {...{
                         type: 'button',
-                        onClick: listenContinuously,
+                        onClick: () => {
+                            setDictaphoneDisableting(!isDictaphoneDisabled)
+                            listenContinuously()
+                        },
+                        disabled: isDictaphoneDisabled,
                     }}>     Listen    </button>
 
                     <button {...{
                         type: 'button',
-                        onClick: SpeechRecognition.stopListening,
+                        onClick: () => {
+                            setDictaphoneDisableting(!isDictaphoneDisabled)
+                            socket.current.emit('i_end_speak')
+                            SpeechRecognition.stopListening()
+                        },
                     }}>    Stop    </button>
                 </div>
             </div>
-            {/* <div>
-                <span>{ message }</span>
-            </div> */}
             <div>
-                <span>{transcript}</span>
+                Ваша речь: <span>{transcript}</span>
             </div>
         </div>
     );

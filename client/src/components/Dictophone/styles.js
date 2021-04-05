@@ -5,4 +5,6 @@ export const dictophone = {
     borderBottom: '1px solid black',
     paddingTop: '2px',
     paddingBottom: '4px',
+
+    height: '100px'
 }
