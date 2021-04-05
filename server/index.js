@@ -1,7 +1,7 @@
 import express from 'express'
 import * as socketio from 'socket.io'
 import bodyParser from 'body-parser'
-import mongoose from 'mongoose'
+// import mongoose from 'mongoose'
 import cors from 'cors'
 
 import http from 'http'
@@ -17,7 +17,7 @@ app.use(bodyParser.json({ limit: '30mb', extended: true}))
 app.use(bodyParser.urlencoded({ limit: '30mb', extended: true}))
 app.use(cors)
 
-const URL_CONNECTION = 'mongodb+srv://admin:<password>@cluster0.lgeix.mongodb.net/<dbname>?retryWrites=true&w=majority'
+// const URL_CONNECTION = 'mongodb+srv://admin:<password>@cluster0.lgeix.mongodb.net/<dbname>?retryWrites=true&w=majority'
 
 const server = http.createServer(app)
 const io = new socketio.Server(server, {
