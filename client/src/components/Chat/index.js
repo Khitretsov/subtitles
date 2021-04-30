@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import queryString from 'query-string'
 import io from 'socket.io-client'
+import fileDownload from 'js-file-download'
 
 import * as styles from './styles'
 
@@ -14,11 +15,37 @@ const Chat = ({ location, history }) => {
     const [isDictaphoneDisabled, setDictaphoneDisableting] = useState(false)
 
     const [subtitlesForShowing, setSubtitlesForShowing] = useState(null)
+
+    const [currentUserSpeach, setCurrentUserSpeach] = useState(null)
+
+    // Сохраненение и выгрузку надо перенести на бекенд
+    const savedText = useRef([])
+
+    const collectText = (() => {
+        const buffer = name
+        return (text, name = buffer) => {
+            savedText.current.push({
+                name,
+                date: `${new Date().getHours()}:${new Date().getMinutes()}:${new Date().getSeconds()}`,
+                text,
+            })
+        }
+    })()
     
     const socket = useRef(null)
+    const rootScrollElem = useRef(null)
+    const scrollElem = useRef(null)
+
+    useEffect(() => {
+        const blockHeight = + getComputedStyle(scrollElem.current).height.slice(0, -2)
+        if (blockHeight > 150) {
+            rootScrollElem.current.scrollTo(0, blockHeight - 150)
+        }
+    })
 
     useEffect(() => {
         socket.current = io('localhost:5000')
+        // socket.current = io('https://subtitles-app123.herokuapp.com/')
         socket.current.emit('join', { name, room }, (error) => {
             console.log('___ error ___', error)
             history.push('/')
@@ -38,9 +65,12 @@ const Chat = ({ location, history }) => {
         })
 
         socket.current.on('subtitles', subtitles => {
-            console.log('subtitles', subtitles.name)
-            setSubtitlesForShowing(subtitles)
-     
+            if (subtitles.subtitles.finalTranscript) {
+                collectText(subtitles.subtitles, subtitles.name)
+                setSubtitlesForShowing(null)
+            } else {
+                setSubtitlesForShowing(subtitles)
+            }
         })
 
         return () => {
@@ -88,23 +118,47 @@ const Chat = ({ location, history }) => {
                 }
             }}/>
         </div>
-        <div style={styles.subtitles_block}>
-            Субтитры от других пользователей: { <>
-                <div>
-                {subtitlesForShowing && ( <>
-                        <span> { `${subtitlesForShowing.name}: ` } </span>
-                        <span> { subtitlesForShowing.subtitles.subtitles } </span>
-                    </>
-                )}
-                </div>
-            </> }
-        </div>
         <Dictaphone {...{
             sendSubtitles,
             isDictaphoneDisabled,
             setDictaphoneDisableting,
             socket,
+            collectText,
+            setCurrentUserSpeach
         }} />
+        <div style={styles.subtitles_block} ref={rootScrollElem}>
+            <div ref={scrollElem}>
+
+                {
+                    savedText.current.map(item => {
+                        return <div key={item.date}>
+                            {`${item.name}: ${(typeof item.text === 'string') ? item.text : item.text.subtitles}`}
+                        </div>
+                    })
+                }
+
+                {
+                    <div style={styles.current_subtitles}>
+                        <div> { currentUserSpeach } </div>
+                        {subtitlesForShowing && ( <>
+                                <span> { `${subtitlesForShowing.name}: ` } </span>
+                                <span> { subtitlesForShowing.subtitles.subtitles } </span>
+                            </>
+                        )}
+                    </div>
+                }
+
+            </div>
+        </div>
+        <div>
+            <button 
+                disabled={isDictaphoneDisabled}
+                onClick={() => {
+                    const data = new Blob([JSON.stringify(savedText.current)], {type : 'application/json'})
+                    fileDownload(data, 'subtitles.json')
+                }}
+            > Скачать субтитры </button>
+        </div>
         <div>
             <div>Сообщения:</div>
             {

@@ -8,13 +8,18 @@ const Dictaphone = ({
     isDictaphoneDisabled,
     setDictaphoneDisableting,
     socket,
+    collectText,
+    setCurrentUserSpeach
 }) => {
 
     const [saveText, setSaveText] = useState([])
+    const [language, setLanguage] = useState('ru')
+
+    const [isRestartStreamNeeded, setStreamRestarting] = useState(false)
 
     const {
         transcript,
-        interimTranscript,
+        // interimTranscript,
         finalTranscript,
         resetTranscript,
         listening,
@@ -22,9 +27,7 @@ const Dictaphone = ({
 
     useEffect(
         () => {
-            console.log('finalTranscript', interimTranscript)
             if (finalTranscript !== '') {
-
                 sendSubtitles(finalTranscript, true)
                 setSaveText([...saveText, finalTranscript])
                 resetTranscript()
@@ -38,7 +41,6 @@ const Dictaphone = ({
     );
 
     useEffect(() => {
-        console.log('socket')
         if (!socket.current) return
         if (transcript !== finalTranscript) {
             sendSubtitles(transcript, false)
@@ -54,9 +56,21 @@ const Dictaphone = ({
         socket.current.emit('i_start_speak')
         SpeechRecognition.startListening({
             continuous: true,
-            language: 'ru',
+            language: language,
         });
     };
+
+    if (isRestartStreamNeeded) {
+        listenContinuously()
+    }
+
+    if (finalTranscript) {
+        collectText(finalTranscript)
+    }
+
+    useEffect(() => {
+        setCurrentUserSpeach(transcript)
+    })
 
 
     return (
@@ -68,15 +82,18 @@ const Dictaphone = ({
                 {listening ? 'on' : 'off'}
                 </span>
                 <div>
-                    <button {...{
-                        type: 'button',
-                        onClick: resetTranscript
-                    }}>     Reset   </button>
+                    <select disabled={isDictaphoneDisabled} value={language} onChange={e => {
+                        setLanguage(e.target.value)
+                    }}>
+                        <option value="ru">ru</option>
+                        <option value="en-US">en-US</option>
+                    </select>
 
                     <button {...{
                         type: 'button',
                         onClick: () => {
                             setDictaphoneDisableting(!isDictaphoneDisabled)
+                            setStreamRestarting(true)
                             listenContinuously()
                         },
                         disabled: isDictaphoneDisabled,
@@ -88,13 +105,15 @@ const Dictaphone = ({
                             setDictaphoneDisableting(!isDictaphoneDisabled)
                             socket.current.emit('i_end_speak')
                             SpeechRecognition.stopListening()
+                            setStreamRestarting(false)
                         },
+                        disabled: !(listening && isDictaphoneDisabled),
                     }}>    Stop    </button>
                 </div>
             </div>
-            <div>
+            {/* <div>
                 Ваша речь: <span>{transcript}</span>
-            </div>
+            </div> */}
         </div>
     );
 };

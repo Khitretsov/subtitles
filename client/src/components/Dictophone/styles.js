@@ -6,5 +6,5 @@ export const dictophone = {
     paddingTop: '2px',
     paddingBottom: '4px',
 
-    height: '100px'
+    height: '50px'
 }

@@ -1,3 +1,6 @@
+// Файл не нужен
+
+
 const users = []
 
 export const addUser = (id, name, room) => {
