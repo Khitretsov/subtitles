@@ -12,7 +12,6 @@ const Chat = ({ location, history }) => {
 
     const [messages, setMessages] = useState([])
     const [newMessage, setNewMessage] = useState('')
-    const [isDictaphoneDisabled, setDictaphoneDisableting] = useState(false)
 
     const [subtitlesForShowing, setSubtitlesForShowing] = useState(null)
 
@@ -20,6 +19,22 @@ const Chat = ({ location, history }) => {
 
     // Сохраненение и выгрузку надо перенести на бекенд
     const savedText = useRef([])
+
+    const userEventsTitles = useRef({
+        data: [],
+        set change(newData) {
+            this.data = newData
+            this.data.forEach(item => {
+                if (name === item.name && room === item.room) return
+    
+                console.log(`subtitles_${item.name}_${item.room}`)
+    
+                socket.current?.on(`subtitles_${item.name}_${item.room}`, subtitles => {
+                   console.log('____  ko-ko-ko  ____', item.name, subtitles)
+                })
+            })   
+        }
+    })
 
     const collectText = (() => {
         const buffer = name
@@ -55,23 +70,26 @@ const Chat = ({ location, history }) => {
             setMessages(oldMessages => [...oldMessages, message])
         })
 
+        socket.current.on('userEventsTitles', _userEventsTitles => {
+            userEventsTitles.current.change = _userEventsTitles
+            console.log('userEventsTitles', _userEventsTitles, userEventsTitles.current.data)
 
-        socket.current.on('someone_starts_speak', () => {
-            setDictaphoneDisableting(true)
+
         })
 
-        socket.current.on('someone_ends_speak', () => {
-            setDictaphoneDisableting(false)
+        socket.current.on('kokoko', data => {
+            console.log('kokoko', name, data)
         })
 
-        socket.current.on('subtitles', subtitles => {
-            if (subtitles.subtitles.finalTranscript) {
-                collectText(subtitles.subtitles, subtitles.name)
-                setSubtitlesForShowing(null)
-            } else {
-                setSubtitlesForShowing(subtitles)
-            }
-        })
+
+        // socket.current.on('subtitles', subtitles => {
+        //     if (subtitles.subtitles.finalTranscript) {
+        //         collectText(subtitles.subtitles, subtitles.name)
+        //         setSubtitlesForShowing(null)
+        //     } else {
+        //         setSubtitlesForShowing(subtitles)
+        //     }
+        // })
 
         return () => {
             socket.current.disconnect()
@@ -90,7 +108,7 @@ const Chat = ({ location, history }) => {
     }
 
     const sendSubtitles = (subtitles, finalTranscript) => {
-        socket.current.emit('sendSubtitles', { subtitles, finalTranscript })
+        socket.current.emit(`sendSubtitles_${name}_${room}`, { subtitles, finalTranscript })
     }
 
     return <>
@@ -99,6 +117,7 @@ const Chat = ({ location, history }) => {
             <button {...{
                 onClick: () => {
                     socket.current.disconnect()
+                    userEventsTitles.current.change = []
                     history.push('/')
                 },
             }}> Выйти </button>
@@ -120,8 +139,6 @@ const Chat = ({ location, history }) => {
         </div>
         <Dictaphone {...{
             sendSubtitles,
-            isDictaphoneDisabled,
-            setDictaphoneDisableting,
             socket,
             collectText,
             setCurrentUserSpeach
@@ -152,7 +169,6 @@ const Chat = ({ location, history }) => {
         </div>
         <div>
             <button 
-                disabled={isDictaphoneDisabled}
                 onClick={() => {
                     const data = new Blob([JSON.stringify(savedText.current)], {type : 'application/json'})
                     fileDownload(data, 'subtitles.json')
